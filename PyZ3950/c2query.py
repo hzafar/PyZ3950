@@ -2,11 +2,11 @@
 #!/usr/local/bin/python2.3
 
 try:
-    from cStringIO import StringIO
+    from io import StringIO
 except:
-    from StringIO import StringIO
+    from io import StringIO
 from PyZ3950 import z3950, oids
-from types import IntType, StringType, ListType
+import types
 # We need "\"\""  to be one token
 from PyZ3950.CQLParser import CQLshlex
 from PyZ3950.CQLUtils import ZCQLConfig
@@ -55,7 +55,7 @@ relations = {'<' : 1,
              '>' : 5,
              'GT' : 5,
              '.GT.' : 5,
-             '<>' : 6,
+             '!=' : 6,
              '!=' : 6,
              'NE' : 6,
              '.NE.' : 6,
@@ -78,7 +78,7 @@ geoRelations = {'>=<' : 7,
                 '.FULLY_ENCLOSED_WITHIN.' : 8,
                 '<#>' : 9,
                 '.ENCLOSES.' : 9,
-                '<>#' : 10,
+                '!=#' : 10,
                 '.OUTSIDE_OF.' : 10,
                 '+-+' : 11,
                 '.NEAR.' : 11,
@@ -132,6 +132,8 @@ privateBooleans = {'!FUZZY_AND' : 1,
                    '!MERGE_SUM' : 6,
                    '!MERGE_MEAN' : 7,
                    '!MERGE_NORM' : 8}
+                   
+xzconfig = ZCQLConfig()
 
 class C2Parser:
     lexer = None
@@ -202,7 +204,7 @@ class C2Parser:
     def subquery(self):
         if self.currentToken == "(":
             object = self.query()
-            if (self.currentToken <> ")"):
+            if (self.currentToken != ")"):
                 raise ValueError
             else:
                 self.fetch_token()
@@ -338,8 +340,8 @@ class C2Parser:
 
         else:
             # Check for named index
-            if (zconfig.bib1.has_key(self.currentToken.lower())):
-                attrs = [[oids.Z3950_ATTRS_BIB1_ov, 1, zconfig.bib1[self.currentToken.lower()]]]
+            if (zconfig.BIB1.has_key(self.currentToken.lower())):
+                attrs = [[oids.Z3950_ATTRS_BIB1_ov, 1, zconfig.BIB1[self.currentToken.lower()]]]
             else:
                 # Just pass through the name
                 attrs = [[oids.Z3950_ATTRS_BIB1_ov, 1, self.currentToken]]

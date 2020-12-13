@@ -47,7 +47,7 @@ Sample usage:
     query = zoom.Query ('CCL', 'ti="1066 and all that"')
     res = conn.search (query)
     for r in res:
-            print str(r)
+            #print(str(r)
     conn.close ()
 I hope everything else is clear from the docstrings and the abstract
 API: let me know if that's wrong, and I'll try to do better.
@@ -156,8 +156,11 @@ _record_type_dict = {}
 def _oid_to_key (oid):
     for (k,v) in _record_type_dict.items ():
         if v.oid == oid:
+            print('hooray')
             return k
-    raise UnknownRecSyn (oid)
+    print('oh no')
+    return 'USMARC' 
+    #raise UnknownRecSyn (oid)
 
 def _extract_attrs (obj, attrlist):
     kw = {}
@@ -210,7 +213,7 @@ class Connection(_AttrCheck, _ErrHdlr):
         'responsePosition' : 'preferredPositionInResponse'
         }
 
-    attrlist = search_attrs + init_attrs + scan_zoom_to_z3950.keys () + [
+    attrlist = search_attrs + init_attrs + list(scan_zoom_to_z3950.keys()) + [
         'databaseName',
         'namedResultSets',
         'preferredRecordSyntax', # these three inheritable by RecordSet
@@ -285,7 +288,7 @@ class Connection(_AttrCheck, _ErrHdlr):
         # cached but not-yet-accessed data is probably an error, but
         # a not-yet-caught error.)
         
-        if self._cli <> None and self._cli.sock <> None:
+        if self._cli != None and self._cli.sock != None:
             return
         
         initkw = {}
@@ -386,7 +389,7 @@ class Connection(_AttrCheck, _ErrHdlr):
                 zk.missingValueAction = ('missingValueData', k.missingValueData)
             value = k.sequence
             if (k.type == 'accessPoint'):
-                if (value.typ <> 'RPN'):
+                if (value.typ != 'RPN'):
                     raise ValueError # XXX
                 l = z3950.SortKey['sortAttributes']()
                 l.id = value.query[1].attributeSet
@@ -452,7 +455,8 @@ Supported query types:  CCL, S-CCL, CQL, S-CQL, PQF, C2, ZSQL, CQL-TREE
            self.typ = 'RPN'
            try:
                self.query = ccl.mk_rpn_query (query)
-           except ccl.QuerySyntaxError, err:
+           except(ccl.QuerySyntaxError, err):
+               print("zoom raising", str (err), " for", query)
                raise QuerySyntaxError (str(err))
         elif typ == 'S-CCL': # server-side ccl
             self.typ = typ
@@ -472,7 +476,7 @@ Supported query types:  CCL, S-CCL, CQL, S-CQL, PQF, C2, ZSQL, CQL-TREE
                 rpnq.attributeSet = oids.Z3950_ATTRS_BIB1_ov
                 rpnq.rpn = q.toRPN()
                 self.query = ('type_1', rpnq)
-            except SRWDiagnostics.SRWDiagnostic, err:
+            except(SRWDiagnostics.SRWDiagnostic, err):
                 raise err
             except:
                 raise QuerySyntaxError
@@ -506,7 +510,7 @@ Supported query types:  CCL, S-CCL, CQL, S-CQL, PQF, C2, ZSQL, CQL-TREE
                 rpnq.attributeSet = oids.Z3950_ATTRS_BIB1_ov
                 rpnq.rpn = query.toRPN()
                 self.query = ('type_1', rpnq)
-            except SRWDiagnostics.SRWDiagnostic, err:
+            except(SRWDiagnostics.SRWDiagnostic, err):
                 raise err
             except:
                 raise QuerySyntaxError
@@ -543,7 +547,7 @@ class ResultSet(_AttrCheck, _ErrHdlr):
             self._extract_recs (self._searchResult.records, 0)
     def __getattr__ (self, key):
         """Forward attribute access to Connection if appropriate"""
-        if self.__dict__.has_key (key):
+        if key in self.__dict__:
             return self.__dict__[key]
         if key in self.inherited_elts:
             return getattr (self._conn, key) # may raise AttributeError
@@ -557,7 +561,7 @@ class ResultSet(_AttrCheck, _ErrHdlr):
             try:
                 kw['recsyn'] = _record_type_dict [
                     self.preferredRecordSyntax].oid
-            except KeyError, err:
+            except(KeyError, err):
                 raise ClientNotImplError ('Unknown record syntax ' +
                                           self.preferredRecordSyntax)
         if hasattr (self, 'elementSetName'):
@@ -572,12 +576,11 @@ class ResultSet(_AttrCheck, _ErrHdlr):
             return i + len (self)
         return i
     def _ensure_recs (self):
-        if not self._records.has_key (self.preferredRecordSyntax):
+        if self.preferredRecordSyntax not in self._records:
             self._records [self.preferredRecordSyntax] = {}
             self._records [self.preferredRecordSyntax][
                 self.elementSetName] = [None] * len (self)
-        if not self._records[self.preferredRecordSyntax].has_key (
-            self.elementSetName):
+        if self.elementSetName not in self._records[self.preferredRecordSyntax]:
             self._records [self.preferredRecordSyntax][
                 self.elementSetName] = [None] * len (self)
 
@@ -590,7 +593,7 @@ class ResultSet(_AttrCheck, _ErrHdlr):
             raise ConnectionError ('Stale result set used')
         # XXX is this right?
         if (not self._conn.namedResultSets) and \
-           self._ctr <> self._conn._resultSetCtr:
+           self._ctr != self._conn._resultSetCtr:
             raise ServerNotImplError ('Multiple Result Sets')
         # XXX or this?
     
@@ -603,7 +606,7 @@ class ResultSet(_AttrCheck, _ErrHdlr):
                 lbound = i
                 count = len (self) - lbound
             else:
-                lbound = (i / maxreq) * maxreq
+                lbound = (i // maxreq) * maxreq
                 count = min (maxreq, len (self) - lbound)
             kw = self._make_keywords ()
             if self._get_rec (lbound) == None:
@@ -619,7 +622,7 @@ class ResultSet(_AttrCheck, _ErrHdlr):
             # range (lbound, lbound + count).  If so, try
             # retrieving just one record. XXX could try
             # retrieving more, up to next cache bdary.
-            if i <> lbound and self._get_rec (i) == None:
+            if i != lbound and self._get_rec (i) == None:
                 presentResp  = self._conn._cli.present (
                     start = i + 1,
                     count = 1,
@@ -628,7 +631,7 @@ class ResultSet(_AttrCheck, _ErrHdlr):
                 self._extract_recs (presentResp.records, i)
         rec = self._records [self.preferredRecordSyntax][
             self.elementSetName][i]
-        if rec <> None and rec.is_surrogate_diag ():
+        if rec != None and rec.is_surrogate_diag ():
             rec.raise_exn ()
     def __getitem__ (self, i):
         """Ensure item is present, and return a Record"""
@@ -652,7 +655,7 @@ class ResultSet(_AttrCheck, _ErrHdlr):
     def _extract_recs (self, records, lbound):
         (typ, recs) = records
         if trace_extract:
-            print "Extracting", len (recs), "starting at", lbound
+            print("Extracting", len (recs), "starting at", lbound)
         if typ == 'nonSurrogateDiagnostic':
             self.err (recs.condition, "", recs.diagnosticSetId)
         elif typ == 'multipleNonSurDiagnostics':
@@ -660,7 +663,7 @@ class ResultSet(_AttrCheck, _ErrHdlr):
             # ignoring all but first error.
             diagRec = recs [0]
             self.err_diagrec (diagRec)
-        if (typ <> 'responseRecords'):
+        if (typ != 'responseRecords'):
             raise ProtocolError ("Bad records typ " + str (typ) + str (recs))
         for i,r in my_enumerate (recs):
             r = recs [i]
@@ -674,7 +677,7 @@ class ResultSet(_AttrCheck, _ErrHdlr):
                 dat = data.encoding
                 (typ, dat) = dat
                 if (oid == oids.Z3950_RECSYN_USMARC_ov):
-                    if typ <> 'octet-aligned':
+                    if typ != 'octet-aligned':
                         raise ProtocolError (
                             "Weird record EXTERNAL MARC type: " + typ)
                 rec = Record (oid, dat, dbname)
@@ -775,7 +778,7 @@ def render_OPAC (opac_data):
                 s_list = []
                 if isinstance (item, asn1.StructBase):
                     for attr, val in item.__dict__.items ():
-                        if attr [0] <> '_':
+                        if attr [0] != '_':
                             s_list.append ("%s%s: %s" % (
                                 "\t" * level, attr, "\n".join(render (val, level + 1))))
                 elif (isinstance (item, type ([])) and len (item) > 0
@@ -802,11 +805,7 @@ def render_OPAC (opac_data):
 
 _RecordType ('USMARC', z3950.Z3950_RECSYN_USMARC_ov,
             renderer = lambda v: str(zmarc.MARC(v)))
-_RecordType ('USMARCnonstrict', z3950.Z3950_RECSYN_USMARC_ov,
-            renderer = lambda v: str(zmarc.MARC(v, strict=0)))
 _RecordType ('UKMARC', z3950.Z3950_RECSYN_UKMARC_ov,
-            renderer = lambda v: str(zmarc.MARC(v)))
-_RecordType ('UNIMARC', z3950.Z3950_RECSYN_UNIMARC_ov,
             renderer = lambda v: str(zmarc.MARC(v)))
 _RecordType ('SUTRS', z3950.Z3950_RECSYN_SUTRS_ov)
 _RecordType ('XML', z3950.Z3950_RECSYN_MIME_XML_ov)
@@ -883,7 +882,7 @@ class ScanSet (_AttrCheck, _ErrHdlr):
         d = {}
         for k,v in self.zoom_to_z3950.items ():
             val = getattr (r, v, None)
-            if val <> None:
+            if val != None:
                 d[k] = val
         d["term"] = self.get_term (i)
         return d
@@ -941,20 +940,20 @@ if __name__ == '__main__':
             res = conn.search (query)
             for esn in esns:
                 for syn in fmts:
-                    print "Syntax", syn, "Esn", esn
+                    print("Syntax", syn, "Esn", esn)
                     res.preferredRecordSyntax = syn
-                    if esn <> 'NONE':
+                    if esn != 'NONE':
                         res.elementSetName = esn
                     try:
                         for r in res:
-                            print str(r)
-                    except ZoomError, err:
-                        print "Zoom exception", err.__class__, err
+                            print(str(r))
+                    except(ZoomError, err):
+                        print("Zoom exception", err.__class__, err)
 #           res.delete ()
 # Looks as if Oxford will close the connection if a delete is sent,
 # despite claiming delete support (verified with yaz client, too).
-        except ZoomError, err:
-            print "Zoom exception", err.__class__, err
+        except(ZoomError, err):
+            print("Zoom exception", err.__class__, err)
 
                     
 

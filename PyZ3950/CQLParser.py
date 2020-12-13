@@ -12,7 +12,7 @@ from xml.sax.saxutils import escape
 from xml.dom.minidom import Node, parseString
 from PyZ3950.SRWDiagnostics import *
 # Don't use cStringIO as it borks Unicode (apparently)
-from StringIO import StringIO
+from io import StringIO
 import types
 
 # Parsing strictness flags
@@ -25,7 +25,7 @@ fullResultSetNameCheck = 1    # srw.rsn=foo and srw.rsn=foo (mutant!!)
 serverChoiceRelation = "scr"
 serverChoiceIndex = "cql.serverchoice"
 
-order = ['=', '>', '>=', '<', '<=', '<>']
+order = ['=', '>', '>=', '<', '<=', '!=']
 modifierSeparator = "/"
 booleans = ['and', 'or', 'not', 'prox']
 
@@ -71,9 +71,9 @@ class PrefixableObject:
             return reservedPrefixes[name]
         elif (self.prefixes.has_key(name)):
             return self.prefixes[name]
-        elif (self.parent <> None):
+        elif (self.parent != None):
             return self.parent.resolvePrefix(name)
-        elif (self.config <> None):
+        elif (self.config != None):
             # Config is some sort of server config which specifies defaults
             return self.config.resolvePrefix(name)
         else:
@@ -177,7 +177,7 @@ class Triple (PrefixableObject):
         txt = []
         if (self.prefixes):
             for p in self.prefixes.keys():
-                if (p <> ''):
+                if (p != ''):
                     txt.append('>%s="%s"' % (p, self.prefixes[p]))
                 else:
                     txt.append('>"%s"' % (self.prefixes[p]))
@@ -253,7 +253,7 @@ class SearchClause (PrefixableObject):
     def toCQL(self):
         text = []
         for p in self.prefixes.keys():
-            if (p <> ''):
+            if (p != ''):
                 text.append('>%s="%s"' % (p, self.prefixes[p]))
             else:
                 text.append('>"%s"' % (self.prefixes[p]))
@@ -317,9 +317,9 @@ class Relation(PrefixedObject, ModifiableObject):
 class Term:
     value = ""
     def __init__(self, v):
-        if (v <> ""):
+        if (v != ""):
             # Unquoted literal
-            if v in ['>=', '<=', '>', '<', '<>', "/", '=']:
+            if v in ['>=', '<=', '>', '<', '!=', "/", '=']:
                 diag = Diagnostic25()
                 diag.details = self.value
                 raise diag
@@ -442,7 +442,7 @@ class ModifierClause:
 
 
 
-# Requires changes for:  <= >= <>, and escaped \" in "
+# Requires changes for:  <= >= !=, and escaped \" in "
 # From shlex.py (std library for 2.2+)
 class CQLshlex(shlex):
     "shlex with additions for CQL parsing"
@@ -471,7 +471,7 @@ class CQLshlex(shlex):
             if nextchar == '\n':
                 self.lineno = self.lineno + 1
             if self.debug >= 3:
-                print "shlex: in state ", repr(self.state),  " I see character:", repr(nextchar)
+                print("shlex: in state ", repr(self.state),  " I see character:", repr(nextchar))
 
             if self.state is None:
                 self.token = ''        # past end of file
@@ -482,7 +482,7 @@ class CQLshlex(shlex):
                     break
                 elif nextchar in self.whitespace:
                     if self.debug >= 2:
-                        print "shlex: I see whitespace in whitespace state"
+                        print("shlex: I see whitespace in whitespace state")
                     if self.token:
                         break   # emit current token
                     else:
@@ -506,7 +506,7 @@ class CQLshlex(shlex):
                     else:
                         continue
             elif self.state == '<':
-                # Only accumulate <=, >= or <>
+                # Only accumulate <=, >= or !=
 
                 if self.token == ">" and nextchar == "=":
                     self.token = self.token + nextchar
@@ -543,7 +543,7 @@ class CQLshlex(shlex):
                     break
                 elif not nextchar:      # end of file
                     if self.debug >= 2:
-                        print "shlex: I see EOF in quotes state"
+                        print("shlex: I see EOF in quotes state")
                     # Override SHLEX's ValueError to throw diagnostic
                     diag = Diagnostic14()
                     diag.details = self.token[:-1]
@@ -554,7 +554,7 @@ class CQLshlex(shlex):
                     break
                 elif nextchar in self.whitespace:
                     if self.debug >= 2:
-                        print "shlex: I see whitespace in word state"
+                        print("shlex: I see whitespace in word state")
                     self.state = ' '
                     if self.token:
                         break   # emit current token
@@ -572,7 +572,7 @@ class CQLshlex(shlex):
                 else:
                     self.pushback = [nextchar] + self.pushback
                     if self.debug >= 2:
-                        print "shlex: I see punctuation in word state"
+                        print("shlex: I see punctuation in word state")
                     self.state = ' '
                     if self.token:
                         break   # emit current token
@@ -582,9 +582,9 @@ class CQLshlex(shlex):
         self.token = ''
         if self.debug > 1:
             if result:
-                print "shlex: raw token=" + `result`
+                print("shlex: raw token=" + result)
             else:
-                print "shlex: raw token=EOF"
+                print("shlex: raw token=EOF")
         return result
 
 class CQLParser:
@@ -920,13 +920,12 @@ def xcqlparse(query):
         return p.triple(query)
 
 
-import sys
 def parse(query):
     """ API. Return a searchClause/triple object from CQL string"""
 
     try:
         query = query.encode("utf-8")
-    except Exception, e:
+    except:
         diag = Diagnostic10()
         diag.details = "Cannot parse non utf-8 characters"
         raise diag
@@ -977,12 +976,12 @@ if (__name__ == "__main__"):
     s = sys.stdin.readline()
     try:
         q = parse(s);
-    except SRWDiagnostic, diag:
+    except(SRWDiagnostic, diag):
         # Print a full version, not just str()
-        print "Diagnostic Generated."
-        print "  Code:        " + str(diag.code)
-        print "  Details:     " + str(diag.details)
-        print "  Message:     " + str(diag.message)
+        print("Diagnostic Generated.")
+        print("  Code:        " + str(diag.code))
+        print("  Details:     " + str(diag.details))
+        print("  Message:     " + str(diag.message))
     else:
-        print q.toXCQL()[:-1];
+        print(q.toXCQL()[:-1])
     

@@ -45,7 +45,7 @@ Programming Language :: Python
 Topic :: Internet :: Z39.50"""
 
 setup (name="PyZ3950",
-       version= vers.version,
+       version= str(vers.version),
        author = "Aaron Lav",
        author_email = "asl2@pobox.com",
        license = "X",

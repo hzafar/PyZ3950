@@ -39,8 +39,8 @@ try:
         'exp1':  oids.Z3950_ATTRS_EXP1_ov
         }
     
-except ImportError, err:
-    print "Error importing (OK during setup)", err
+except(ImportError, err):
+    #print("Error importing (OK during setup)", err
     in_setup = 1
 
 class QuerySyntaxError(Exception): pass
@@ -70,7 +70,7 @@ relop_to_attrib = {
     '=': 3,
     '>=': 4,
     '>': 5,
-    '<>': 6}
+    '!=': 6}
 
 t_RELOP = "|".join (["(%s)" % r for r in relop_to_attrib.keys()])
 # XXX Index Data docs say 'doesn't follow ... ISO8777'?
@@ -120,7 +120,7 @@ t_ignore = " \t"
 def t_error(t):
     raise LexError ('t_error: ' + str (t))
 
-
+    
 from ply import lex
 
 
@@ -210,7 +210,7 @@ def xlate_qualifier (x):
 
 def p_elements_2 (t):
     'elements : SET RELOP WORD'
-    if t[2] <> '=':
+    if t[2] != '=':
         raise QuerySyntaxError (str (t[1], str (t[2]), str (t[3])))
     t[0] = Node ('set', leaf = t[3])
 
@@ -268,7 +268,7 @@ def attrset_to_oid (attrset):
         split_l = oids.Z3950_ATTRS + split_l[1:]
     try:
         intlist = map (string.atoi, split_l)
-    except ValueError:
+    except(ValueError):
         raise ParseError ('Bad OID: ' + l)
     return asn1.OidVal (intlist)
 
@@ -287,7 +287,7 @@ def tree_to_q (ast):
         # doesn't support other relation attributes, either.
         try:
             relattr = relop_to_attrib [ast.leaf]
-        except KeyError:  # should never happen, how could we have lexed it?
+        except(KeyError):  # should never happen, how could we have lexed it?
             raise UnimplError (ast.leaf)
         def make_aelt (qual):
             val = ('numeric', qual [1])
@@ -295,7 +295,7 @@ def tree_to_q (ast):
                                            attributeValue = val)
         apt  = z3950.AttributesPlusTerm ()
         quallist = ast.children.quallist
-        if ast.leaf <> '=':
+        if ast.leaf != '=':
             quallist.append ((2,relattr)) # 2 is relation attribute
             # see http://www.loc.gov/z3950/agency/markup/13.html ATR.1.1
         apt.attributes = map (make_aelt, quallist)
@@ -344,13 +344,13 @@ def testlex (s):
         token = lexer.token ()
         if not token:
             break
-        print token
+        #print(token
             
 def testyacc (s):
     copylex = lexer.__copy__ ()
     ast = yacc.parse (s, lexer = copylex)
-    print "AST:", ast
-    print "RPN Query:", ast_to_rpn (ast)
+    #print("AST:", ast
+    #print("RPN Query:", ast_to_rpn (ast)
 
 if __name__ == '__main__':
     testfn = testyacc

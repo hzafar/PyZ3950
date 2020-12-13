@@ -127,17 +127,17 @@ def parse_sub (field):
             return (' ', ' ', [])
         return None
 
-    if field [2] <> sep:
-        print "Bad field [2]", repr (field[2])
+    if field [2] != sep:
+        print("Bad field [2]", repr (field[2]))
         return None
     ind1 = field[0]
     ind2 = field[1]
     sublist = []
-    splitlist = string.split (field[2:], sep)
+    splitlist = str.split (field[2:], sep)
     for sub in splitlist:
         if (sub == ''): # we begin w/ sep, so there's an empty prefix
             continue
-        sublist.append ((sub[0], string.strip(sub[1:])))
+        sublist.append ((sub[0], str.strip(sub[1:])))
     return (ind1, ind2, sublist)
     
 class MARC:
@@ -187,31 +187,22 @@ class MARC:
             end   = start + fieldlen
             line = self.marc[start:end]
             lastpos = startpos
-            if len (line) == 0:
-                # actually happens for LC control id 12547199,
-                # retrievable w/ au=Boulanger
-#                print "0-len line for", tag, repr (line)
-                continue
             if line [-1] == '\x1E':
                 line = line[:-1]
-            else:
-                pass # happens for same record as above.
-#                print "Weird, no hex 1E for", tag, repr(line)
-            field = string.atoi (tag)
+            else: print("Weird, no hex 1E for", tag, repr(line))
+            field = int(tag)
             if is_fixed (field):
                 self.fields[field] = [line]
                 # 1-elt list for orthogonality of processing
             else:
                 ps = parse_sub (line)
-                #if ps == None:
-                #    raise MarcError (line)
-                if ps != None:
-                    self.fields.setdefault (field, []).append (ps)
+                if ps == None:
+                    raise MarcError (line)
+                self.fields.setdefault (field, []).append (ps)
         self.ok = 1
         # XXX should do more error-checking
     def __str__ (self):
-        k = self.fields.keys ()
-        k.sort ()
+        k = sorted(self.fields)
         lst = []
         for field in k:
             lst.append (self.stringify_field (field))
@@ -229,14 +220,7 @@ class MARC:
                 str_l.append (str(k) + " " + l[0] + l[1] + " ".join (sl))
             return "\n".join (str_l)
     def extract_int (self, start, end):
-        bit = self.marc[start:end+1]
-        if bit.isspace():
-            return 0
-        try:
-            return string.atoi (bit)
-        except:
-            raise MarcError("Un-intable string: %r in %r" % (bit, self.marc))
-        
+        return int(self.marc[start:end+1])
     def get_MARC (self):
         hdrlist = [' '] * 24
         zerostr = self.fields [0][0]
@@ -778,7 +762,7 @@ class MARC:
 
             if (f8 and len(f8[0]) > 18 ):
                 loc = f8[0][15:18]
-                if (loc <> '   ' and loc <> '|||'): 
+                if (loc != '   ' and loc != '|||'): 
                     xml.append('    <place><placeTerm type="code" authority="marccountry">%s</placeTerm></place>\n' % (loc))
 
             if (f44):
@@ -801,7 +785,7 @@ class MARC:
                 f8type = f8[0][6]
                 if (f8type in ['e', 'p', 'r', 's', 't']):
                     date = f8[0][7:11]
-                    if (date <> '    '):
+                    if (date != '    '):
                         xml.append('    <dateIssued encoding="marc">%s</dateIssued>\n' % (date))
                 if (f8type in ['c', 'd', 'i', 'k', 'm', 'u', 'q']):
                     if (f8type == 'q'):
@@ -809,10 +793,10 @@ class MARC:
                     else:
                         attrib = ""
                     start = f8[0][7:11]
-                    if (start <> '    '):
+                    if (start != '    '):
                         xml.append('    <dateIssued point="start" encoding="marc"%s>%s</dateIssued>\n' % (attrib, start))
                     end = f8[0][11:15]
-                    if (end <> '    '):
+                    if (end != '    '):
                         xml.append('    <dateIssued point="end" encoding="marc"%s>%s</dateIssued>\n' % (attrib, end))
 
             if (f260):
@@ -864,7 +848,7 @@ class MARC:
         # --- Language ---
         if (f8 and len(f8[0]) > 38):
             lang = f8[0][35:38]
-            if (lang <> '   '):
+            if (lang != '   '):
                 xml.append('  <language><languageTerm type="code" authority="iso639-2b">%s</languageTerm></language>\n' % (lang))
         if self.fields.has_key(41):
             a = two = ''
@@ -922,33 +906,13 @@ class MARC:
         # XXX TargetAudience (field 8 again)
 
         # --- Note ---
-        notes_to_typ = { # http://www.loc.gov/standards/mods/mods-notes.html
-            500 : None,
-            541 : 'acquisition',
-            583 : 'action',
-            530 : 'additional form',
-            504 : 'bibliography',
-            545 : 'biographical',
-            510 : 'citation',
-            518 : 'date',
-            585 : 'exhibitions',
-            536 : 'funding',
-            546 : 'language',
-            561 : 'ownership',
-            511 : 'performers',
-            518 : 'venue'} # and 
-            
-        for field, typ in notes_to_typ.items ():
-            if (self.fields.has_key(field)):
-                for n in self.fields[field]:
-                    if typ == None:
-                        xml.append('  <note>');
-                    else:
-                        xml.append('  <note type="%s">' % typ)
-                    for s in n[2]:
-                        if (s[0] == 'a'):
-                            xml.append(escape(s[1]))
-                    xml.append('</note>\n')
+        if (self.fields.has_key(500)):
+            for n in (self.fields[500]):
+                xml.append('  <note>');
+                for s in n:
+                    if (s[0] == 'a'):
+                        xml.append(escape(s[1]))
+                xml.append('</note>\n')
 
         # --- Subject ---
         subjectList = [600, 610, 611, 630, 650, 651, 653]
@@ -1035,7 +999,7 @@ class MARC:
         if (self.fields.has_key(45)):
             full = self.fields[45][0]
             if (full[0] in ['0', '1']):
-                for x in full[2]:
+                for x in self.fields[2]:
                     if (x[0] == 'b'):
                         xml.append('  <subject><temporal encoding="iso8601">%s</temporal></subject>\n' % (escape(x[1])))
                         
@@ -1048,7 +1012,7 @@ class MARC:
 
         if (self.fields.has_key(752)):
             xml.append('  <subject><hierarchicalGeographic>\n')
-            for sub in self.fields[752][0][2]:
+            for sub in self.fields[43][0][2]:
                 val = escape(sub[1])
                 if (sub[0] == 'a'):
                     xml.append('    <country>%s</country>\n' % (val))
@@ -1086,8 +1050,8 @@ class MARC:
         cfields = {50 : 'lcc', 82 : 'ddc', 80 : 'udc', 60 : 'nlm'}
         for k in cfields:
             if (self.fields.has_key(k)):
-                stuff = []
                 for sub in self.fields[k][0][2]:
+                    stuff = []
                     if (sub[0] == 'a'):
                         stuff.append(escape(sub[1]))
                     elif (sub[0] == 'b'):
@@ -1145,7 +1109,7 @@ class MARC:
                         xml.append('    <recordContentSource authority="marcorg">%s</recordContentSource>\n' % (escape(sub[1])))
         if (self.fields.has_key(8)):
             date = self.fields[8][0][0:6]
-            if (date <> '      '):
+            if (date != '      '):
                 xml.append('    <recordCreationDate encoding="marc">%s</recordCreationDate>\n' % (date))
 
         if (self.fields.has_key(1)):
@@ -1203,12 +1167,7 @@ class MARC8_to_Unicode:
             if s[pos] == '\x1b':
                 if (s[pos +1] == s[pos+2] and
                     (s[pos +1] == '$' or s[pos+1] == '(')):
-                    # '$' for multiple bytes/char, '(' for single
-                    # XXX note that ',' is also acceptable for single, and
-                    # '$' for double.
                     self.g0 = ord (s[pos+3])
-                    # XXX or !E two-char seq for ANSEL?
-                    # XXX or ')', '-', 1-char or '$)', '$-' for G1
                     pos = pos + 4
                     continue
             mb_flag = self.is_multibyte (self.g0)
@@ -1252,9 +1211,9 @@ def test_convert (s, enc):
     conv = MARC8_to_Unicode ()
     converted = conv.translate (s)
     converted = unicodedata.normalize ('NFC', converted)
-    print converted.encode (enc)
+    print(converted.encode (enc))
 
-    print repr (converted)
+    print(repr (converted))
 
         
 
@@ -1274,7 +1233,7 @@ if __name__ == '__main__':
         marc_text = marc_file.read ()
         while 1:
             marc_data1 = MARC(marc_text)
-            print str (marc_data1)
+            print(str (marc_data1))
             new = marc_data1.get_MARC ()
             marc_data2 = MARC (marc_text)
             k1 = marc_data1.fields.keys ()

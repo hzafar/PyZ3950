@@ -1,12 +1,12 @@
 #!/usr/local/bin/python2.3
 
 try:
-    from cStringIO import StringIO
+    from io import StringIO
 except:
-    from StringIO import StringIO
+    from io import StringIO
 from PyZ3950 import z3950, oids,asn1
 from PyZ3950.zdefs import make_attr
-from types import IntType, StringType, ListType
+import types
 from PyZ3950.CQLParser import CQLshlex
 
 
@@ -104,7 +104,7 @@ class PQFParser:
         elif (self.currentToken == "{"):
             # Parens
             s = self.query_struct()
-            if (self.nextToken <> "}"):
+            if (self.nextToken != "}"):
                 raise(ValueError)
             else:
                 self.fetch_token()

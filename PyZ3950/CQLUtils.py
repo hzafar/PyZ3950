@@ -1,9 +1,9 @@
 
 """CQL utility functions and subclasses"""
 
-from CQLParser import *
-from types import ListType, IntType
-from SRWDiagnostics import *
+from .CQLParser import *
+import types
+from .SRWDiagnostics import *
 
 from PyZ3950 import z3950, asn1, oids
 from PyZ3950.zdefs import make_attr
@@ -179,7 +179,7 @@ class ZCQLConfig:
             if not index:
                     index  = indexType("bib1.%i" % (use))
 
-        relations = ['', '<', '<=', '=', '>=', '>', '<>']
+        relations = ['', '<', '<=', '=', '>=', '>', '!=']
         if (comp == 3):
             relation = relationType("exact")
         elif (rel > 6):
@@ -265,7 +265,7 @@ def rpn2cql(rpn, config=zConfig, attrSet=None):
             else:
                 order = "unordered"
             relation = bool[1].relationType
-            rels = ["", "<", "<=", "=", ">=", ">", "<>"]
+            rels = ["", "<", "<=", "=", ">=", ">", "!="]
             relation = rels[relation]
             unit = bool[1].proximityUnitCode
             units = ["", "character", "word", "sentence", "paragraph", "section", "chapter", "document", "element", "subelement", "elementType", "byte"]
@@ -386,7 +386,7 @@ class CBoolean(Boolean):
                 else:
                     prox.distance = 0
             try:
-                rels = ["", "<", "<=", "=", ">=", ">", "<>"]
+                rels = ["", "<", "<=", "=", ">=", ">", "!="]
                 prox.relationType = rels.index(d.comparison)
             except:
                 prox.relationType = 2
@@ -478,7 +478,7 @@ class CIndex(Index):
                 # complex attribute for bib1
                 val = self.value
         else:
-            print "Can't resolve %s" % pf
+            #print("Can't resolve %s" % pf
             raise(ValueError)
             
         return {(set, 1) :  val}
@@ -486,7 +486,7 @@ class CIndex(Index):
 
 class CRelation(Relation):
     def toRPN(self, top):
-        rels = ['', '<', '<=', '=', '>=', '>', '<>']
+        rels = ['', '<', '<=', '=', '>=', '>', '!=']
         set = z3950.Z3950_ATTRS_BIB1_ov
         vals = [None, None, None, None, None, None, None]
 
