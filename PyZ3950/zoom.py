@@ -156,11 +156,8 @@ _record_type_dict = {}
 def _oid_to_key (oid):
     for (k,v) in _record_type_dict.items ():
         if v.oid == oid:
-            print('hooray')
             return k
-    print('oh no')
-    return 'USMARC' 
-    #raise UnknownRecSyn (oid)
+    raise UnknownRecSyn (oid)
 
 def _extract_attrs (obj, attrlist):
     kw = {}

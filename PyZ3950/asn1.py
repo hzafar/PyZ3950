@@ -921,10 +921,10 @@ class OidVal:
         for i in self.lst:
             s = s + ' %d' % i
         return s
-    def __cmp__ (self, other):
+    def __eq__ (self, other):
         if not hasattr (other, 'lst'):
             return -1
-        return cmp (self.lst, other.lst)
+        return self.lst == other.lst
     def encode (self, lst):
         encoded = [40 * lst [0] + lst [1]]
         for val in lst [2:]:
